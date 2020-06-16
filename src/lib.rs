@@ -425,6 +425,18 @@ impl<'a> Id<'a> {
     }
 }
 
+pub enum GraphAttributes {
+    Overlap,
+    Spline,
+    Concentrate,
+    Root,
+}
+pub struct GraphOption<'a>(GraphAttributes, LabelText<'a>);
+impl<'a> GraphOption<'a> {
+    pub fn new(attr: GraphAttributes, t: LabelText<'a>) -> GraphOption<'a> {
+        GraphOption(attr, t)
+    }
+}
 /// Each instance of a type that implements `Label<C>` maps to a
 /// unique identifier with respect to `C`, which is used to identify
 /// it in the generated .dot file. They can also provide more
@@ -437,6 +449,8 @@ impl<'a> Id<'a> {
 pub trait Labeller<'a, N, E> {
     /// Must return a DOT compatible identifier naming the graph.
     fn graph_id(&'a self) -> Id<'a>;
+
+    fn graph_attributes(&'a self) -> Vec<GraphOption<'a>>;
 
     /// Maps `n` to a unique identifier with respect to `self`. The
     /// implementer is responsible for ensuring that the returned name
@@ -950,7 +964,17 @@ pub fn render_opts<
         w,
         &[g.kind().keyword(), " ", g.graph_id().as_slice(), " {"]
     ));
-    try!(writeln(w, &[g.kind().keyword(), " ", g.graph_id().as_slice(), " {"]));
+    for go in g.graph_attributes() {
+        indent(w)?;
+        let (attr, val) = (go.0, go.1);
+        let s = match attr {
+            GraphAttributes::Overlap => "overlap",
+            GraphAttributes::Spline => "spline",
+            GraphAttributes::Concentrate => "concentrate",
+            GraphAttributes::Root => "root",
+        };
+        writeln!(w, "{} = {}", s, val.to_dot_string())?;
+    }
     for n in g.nodes().iter() {
         let colorstring;
 
